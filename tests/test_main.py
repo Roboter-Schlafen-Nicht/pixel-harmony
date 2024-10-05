@@ -1,4 +1,4 @@
-from main import main
+from pixelharmony.main import main
 
 
 def test_main():
