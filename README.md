@@ -33,8 +33,8 @@ PixelHarmony is an innovative application that bridges the gap between visual an
 
 1. Clone the repository:
    ```
-   git clone https://github.com/yourusername/PixelHarmony.git
-   cd PixelHarmony
+   git clone https://github.com/Roboter-Schlafen-Nicht/pixel-harmony.git
+   cd pixel-harmony
    ```
 
 2. Create a Conda environment:
@@ -62,6 +62,22 @@ PixelHarmony is an innovative application that bridges the gap between visual an
    ```
    export ANTHROPIC_API_KEY='your-api-key-here'
    ```
+
+### Setting up PEP 8 Enforcement
+
+To ensure code quality and consistency, we use Flake8, Black, and pre-commit hooks. Set them up as follows:
+
+1. Install the required tools:
+   ```
+   pip install flake8 black pre-commit
+   ```
+
+2. Set up pre-commit hooks:
+   ```
+   pre-commit install
+   ```
+
+Now, before each commit, your code will be automatically checked and formatted to comply with PEP 8 standards.
 
 ## Usage
 
