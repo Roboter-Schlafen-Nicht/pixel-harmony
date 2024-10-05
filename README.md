@@ -33,7 +33,7 @@ PixelHarmony is an innovative application that bridges the gap between visual an
 
 1. Clone the repository:
    ```
-   git clone https://github.com/yourusername/PixelHarmony.git
+   git clone https://github.com/yourusername/pixel-harmony.git
    cd PixelHarmony
    ```
 
