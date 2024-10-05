@@ -58,29 +58,27 @@ All Python code must adhere to [PEP 8](https://www.python.org/dev/peps/pep-0008/
 2. **Black**: An opinionated code formatter that automatically formats your code to conform to PEP 8.
 3. **Pre-commit hooks**: To automatically run these checks before each commit.
 
-#### Setting up the development environment
+## Setting up the development environment
 
-1. Install the required tools:
+1. Follow the installation steps in the README.md file.
+
+2. Create a `.env` file in the project root with the following content:
    ```
-   pip install flake8 black pre-commit
+   PYTHONPATH=.:${PYTHONPATH}
+   ANTHROPIC_API_KEY='your-api-key-here'
+   ```
+   Replace 'your-api-key-here' with your actual Anthropic API key.
+
+3. Install the required tools:
+   ```
+   pip install -r requirements.txt
    ```
 
-2. Set up pre-commit hooks:
+4. Set up pre-commit hooks:
    ```
    pre-commit install
    ```
 
-3. Run Black on your code:
-   ```
-   black .
-   ```
-
-4. Check your code with Flake8:
-   ```
-   flake8 .
-   ```
-
-These steps will be automatically run before each commit, but you can also run them manually as shown above.
 
 ### Documentation Styleguide
 
