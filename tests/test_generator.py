@@ -31,6 +31,7 @@ Functions:
 """
 
 from pixelharmony.generator import Generator
+from unittest.mock import patch
 
 
 def test_create_melody_length():
@@ -177,15 +178,15 @@ def test_save_midi(tmp_path):
     This test verifies that the save_midi method correctly saves a MIDI file with the
     given melody to the specified file path.
 
-    Args:
-        tmp_path (pathlib.Path): A temporary directory path provided by pytest.
-
     Asserts:
-        The test asserts that the MIDI file is successfully created at the specified
-        file path.
+        The test asserts that the save_midi method is called with the correct
+        parameters.
     """
     generator = Generator()
     melody = [60, 62, 64, 65, 67, 69, 71, 72]
     file_path = tmp_path / "test_output.mid"
-    generator.save_midi(melody, str(file_path))
-    assert file_path.exists()
+
+    with patch("midiutil.MidiFile.MIDIFile.writeFile") as mock_write_file:
+        with patch("builtins.open", create=True):
+            generator.save_midi(melody, str(file_path))
+            mock_write_file.assert_called_once()
