@@ -88,6 +88,17 @@ We use pytest for testing. To run the tests:
 
 To add new tests, create files with the prefix `test_` in the `tests/` directory.
 
+## Run Github actions locally
+
+1. Ensure you're in the project root directory and your Conda environment is activated.
+
+2. Ensure [act](https://www.freecodecamp.org/news/how-to-run-github-actions-locally/) has been installed
+
+2. Run Default Github Actions:
+   ```
+   act
+   ```
+
 ## Contributing
 
 Contributions to PixelHarmony are welcome! Please refer to our [Contributing Guidelines](CONTRIBUTING.md) for more information.
