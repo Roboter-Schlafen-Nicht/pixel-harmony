@@ -4,7 +4,7 @@ First off, thank you for considering contributing to PixelHarmony! It's people l
 
 ## Code of Conduct
 
-By participating in this project, you are expected to uphold our Code of Conduct. Please report unacceptable behavior to [business@roboterschlafennicht.de].
+By participating in this project, you are expected to uphold our Code of Conduct. Please report unacceptable behavior to [developer@roboterschlafennicht.de].
 
 ## How Can I Contribute?
 
