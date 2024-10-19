@@ -7,3 +7,4 @@ pytest-dotenv
 nltk
 pygame
 midiutil
+anthropic

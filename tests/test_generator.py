@@ -30,8 +30,8 @@ Functions:
         Test that the save_midi method saves a MIDI file to the specified path.
 """
 
-from pixelharmony.generator import Generator
 from unittest.mock import patch
+from pixelharmony.generator import Generator
 
 
 def test_create_melody_length():
