@@ -5,3 +5,5 @@ pre-commit
 python-dotenv
 pytest-dotenv
 nltk
+pygame
+midiutil
