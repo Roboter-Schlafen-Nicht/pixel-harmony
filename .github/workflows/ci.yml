@@ -18,6 +18,11 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
 
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y portaudio19-dev python3-pyaudio
+
     - name: Set up environment variables
       run: |
         echo "PYTHONPATH=.:$PYTHONPATH" >> $GITHUB_ENV
