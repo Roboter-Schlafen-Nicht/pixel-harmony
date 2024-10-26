@@ -1,4 +1,4 @@
-""" Main module for the Pixel Harmony package with mock player for testing environments. """
+"""Main module for the Pixel Harmony package with mock player for testing environments."""
 
 import os
 import time
@@ -79,7 +79,7 @@ class AudioPlayer(BasePlayer):
 
 
 def create_player(testing=False):
-    """Factory function to create appropriate player."""
+    """Create appropriate player."""
     if testing:
         return MockPlayer()
     try:
@@ -94,7 +94,7 @@ def create_player(testing=False):
 
 def main(testing=False):
     """
-    Main function to generate and optionally play a melody.
+    Generate and optionally play a melody.
 
     Args:
         testing (bool): If True, use mock player instead of real audio.

@@ -1,4 +1,64 @@
 [flake8]
 max-line-length = 120
-extend-ignore = E203, W503
-exclude = .git,__pycache__,docs/source/conf.py,old,build,dist
+extend-ignore =
+    # One line docstrings
+    D200,D212,
+    # First line should end with a period
+    D400,
+    # First line should be in imperative mood
+    D401,
+    # First word of the first line should be properly capitalized
+    D403,
+    # First word of the docstring should not be This
+    D404,
+    # Section name should end with a newline
+    D406,
+    # Missing dashed underline after section
+    D407,
+    # Section underline should be in the line following the section's name
+    D408,
+    # Section underline should match the length of its name
+    D409,
+    # Missing blank line after section
+    D410,
+    # Missing blank line before section
+    D411,
+    # Missing blank line after last section
+    D413,
+    # First line should end with a period, question mark, or exclamation point
+    D415,
+    # Section name should end with a colon
+    D416,
+    # Missing argument descriptions in the docstring
+    D417,
+    # First line should not end with a period
+    D205,
+    # No blank lines allowed after function docstring
+    D202,
+    # 1 blank line required between summary line and description
+    D205
+
+exclude =
+    .git,
+    __pycache__,
+    build,
+    dist,
+    venv,
+    .venv,
+    .eggs,
+    *.egg
+
+per-file-ignores =
+    # Allow test files to have long lines and many local variables
+    tests/*:E501,E226,E266,D
+    # Allow __init__.py to have unused imports
+    __init__.py:F401, D104,D107
+    setup.py:D100
+
+# Compatibility with black
+max-complexity = 18
+select = B,C,E,F,W,T4,B9,D
+ignore = E203, E266, E501, W503, F403, F401, D202
+
+# Documentation options
+docstring-convention = google

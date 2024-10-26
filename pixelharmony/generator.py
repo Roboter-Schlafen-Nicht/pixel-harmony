@@ -29,6 +29,7 @@ class Generator:
     ]
 
     def __init__(self, key=None, mode=None, tempo=120, time_signature=(4, 4)):
+        """Initialize the Generator with musical parameters."""
         self.key = key
         self.mode = mode
         self.tempo = tempo

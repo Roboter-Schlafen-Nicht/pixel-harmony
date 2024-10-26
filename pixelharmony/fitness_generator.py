@@ -33,6 +33,7 @@ class FitnessGenerator:
     """
 
     def __init__(self):
+        """Initializes the FitnessGenerator by loading environment variables and setting"""
         dotenv.load_dotenv()
         self.client = anthropic.Anthropic()
 
