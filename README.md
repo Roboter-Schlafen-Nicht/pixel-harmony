@@ -15,6 +15,19 @@ PixelHarmony is an innovative application that bridges the gap between visual an
 
 ### Prerequisites
 
+### System Requirements
+
+```bash
+# Ubuntu/Debian
+sudo apt-get update
+sudo apt-get install -y \
+    python3-pyaudio \
+    portaudio19-dev \
+    fluidsynth \
+    fluid-soundfont-gm
+```
+### Python Requirements
+
 - Python 3.8 or higher
 - Conda package manager
 
@@ -74,13 +87,30 @@ Now, before each commit, your code will be automatically checked and formatted t
 
 To run PixelHarmony:
 
-```
-python -m pixelharmony.main
+1. Run the application:
+
+```bash
+python main.py
 ```
 
-Follow the on-screen prompts to select an image and generate music.
+2. Follow the interactive prompts to:
+   - Select an audio output device
+   - Generate a melody using genetic algorithms
+   - Listen to the generated melody
+   - Save or discard the MIDI file
 
-## Testing
+## Development
+
+### Code Quality
+
+We use several tools to maintain code quality:
+
+1. Install pre-commit hooks:
+```bash
+pre-commit install
+```
+
+### Testing
 
 We use pytest for testing. To run the tests:
 
@@ -93,7 +123,7 @@ We use pytest for testing. To run the tests:
 
 To add new tests, create files with the prefix `test_` in the `tests/` directory.
 
-## Run Github actions locally
+### Run Github actions locally
 
 1. Ensure you're in the project root directory and your Conda environment is activated.
 

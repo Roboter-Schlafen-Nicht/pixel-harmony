@@ -1,6 +1,7 @@
 """Tests for the Generator class functionality."""
 
 import pytest
+from unittest.mock import patch, MagicMock
 from pixelharmony.generator import Generator
 
 
@@ -193,3 +194,54 @@ def test_complete_melody_generation(generator):
         last_note = melody[-1]
         assert first_note in generator.C_MAJOR, "First note should be in scale"
         assert last_note in generator.C_MAJOR, "Last note should be in scale"
+
+
+@pytest.mark.coverage
+class TestCoverageImprovement:
+    """Tests specifically targeting missing coverage."""
+
+    def test_evaluate_harmony_special_cases(self, generator):
+        """Test harmony evaluation special cases."""
+        test_cases = [
+            ([60], "single note"),
+            ([60, 64, 67], "triad"),
+            ([60, 64, 67, 60], "cadence"),
+            ([67, 71, 74, 60], "dominant to tonic"),
+        ]
+
+        for melody, case in test_cases:
+            score = generator._evaluate_harmony(melody)
+            assert score >= 0, f"Failed for case: {case}"
+            assert score <= 20, f"Score too high for case: {case}"
+
+    def test_evaluate_harmony_edge_cases(self, generator):
+        """Test harmony evaluation with edge cases."""
+        # Test empty melody
+        score = generator._evaluate_harmony([])
+        assert score == 0, "Empty melody should score 0"
+
+        # Test invalid notes
+        score = generator._evaluate_harmony([128, 129])  # Invalid MIDI notes
+        assert score >= 0, "Invalid notes should not crash"
+
+        # Test special conditions (lines 201-208)
+        special_melody = [67, 71, 74, 60]  # V-I progression
+        score = generator._evaluate_harmony(special_melody)
+        assert score > 0, "V-I progression should score points"
+
+    @pytest.mark.parametrize(
+        "melody,expected_range",
+        [
+            ([], (0, 0)),  # Empty melody
+            ([60], (0, 20)),  # Single note
+            ([60, 64, 67], (0, 20)),  # Triad
+            ([60, 64, 67, 60], (0, 20)),  # Full progression
+        ],
+    )
+    def test_harmony_score_ranges(self, generator, melody, expected_range):
+        """Test harmony evaluation score ranges."""
+        min_expected, max_expected = expected_range
+        score = generator._evaluate_harmony(melody)
+        assert (
+            min_expected <= score <= max_expected
+        ), f"Score {score} outside expected range {expected_range}"
