@@ -52,7 +52,8 @@ per-file-ignores =
     # Allow test files to have long lines and many local variables
     tests/*:E501,E226,E266,D
     # Allow __init__.py to have unused imports
-    __init__.py:F401
+    __init__.py:F401, D104,D107
+    setup.py:D100
 
 # Compatibility with black
 max-complexity = 18
