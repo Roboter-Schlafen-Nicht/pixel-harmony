@@ -8,3 +8,8 @@ nltk
 pygame
 midiutil
 anthropic
+pyfluidsynth
+sounddevice
+numpy
+scipy
+midi2audio
