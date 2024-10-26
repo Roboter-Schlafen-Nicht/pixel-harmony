@@ -4,6 +4,8 @@ black
 pre-commit
 python-dotenv
 pytest-dotenv
+pytest-cov
+coverage
 nltk
 pygame
 midiutil
