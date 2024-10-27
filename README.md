@@ -31,6 +31,13 @@ sudo apt-get install -y \
 - Python 3.8 or higher
 - Conda package manager
 
+### Google Photos API Setup
+
+1. Create a Google Cloud Project
+2. Enable the Google Photos Library API
+3. Create OAuth 2.0 credentials
+4. Download the credentials and save as `client_secret.json` in the project root
+
 ### Installation
 
 1. Clone the repository:
@@ -47,7 +54,9 @@ sudo apt-get install -y \
 
 3. Install the required packages:
    ```
-   pip install -r requirements.txt
+   pip install -r requirements-prod.txt
+   # if you are setting up a development environment also install dev requirements
+   pip install -r requirements-dev.txt
    ```
 
 4. Set up NLTK data:

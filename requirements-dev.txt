@@ -1,0 +1,13 @@
+# Include base requirements
+-r requirements.txt
+
+# Testing
+pytest
+pytest-cov
+pytest-dotenv
+coverage
+
+# Code Quality
+flake8
+black
+pre-commit

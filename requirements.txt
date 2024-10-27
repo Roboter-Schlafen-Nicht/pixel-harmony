@@ -1,17 +1,18 @@
-pytest
-flake8
-black
-pre-commit
-python-dotenv
-pytest-dotenv
-pytest-cov
-coverage
-nltk
-pygame
-midiutil
-anthropic
-pyfluidsynth
-sounddevice
+# Core dependencies
 numpy
 scipy
+sounddevice
+python-dotenv
+midiutil
 midi2audio
+pygame
+pyfluidsynth
+
+# Machine Learning and AI
+anthropic
+nltk
+
+# Image Processing
+Pillow
+colorthief
+requests
