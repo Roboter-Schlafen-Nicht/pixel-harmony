@@ -1,5 +1,7 @@
 """Main module for the Pixel Harmony package with interactive audio device selection."""
 
+import logging
+import sys
 import os
 import time
 from abc import ABC, abstractmethod
@@ -156,6 +158,41 @@ def create_player(testing=False):
     except Exception as e:
         print(f"Warning: Audio system not available ({e}), using mock player")
         return MockPlayer()
+
+
+def configure_logging():
+    """Configure logging for different components of the application."""
+
+    # Create formatters
+    formatter = logging.Formatter(
+        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    )
+
+    # File handler for all logs
+    file_handler = logging.FileHandler("pixel_harmony.log")
+    file_handler.setFormatter(formatter)
+    file_handler.setLevel(logging.DEBUG)  # Capture all logs in file
+
+    # Console handler for different levels
+    console_handler = logging.StreamHandler(sys.stdout)
+    console_handler.setFormatter(formatter)
+    console_handler.setLevel(logging.INFO)  # Show INFO and above in console
+
+    # Configure API logger
+    api_logger = logging.getLogger("pixel_harmony.api")
+    api_logger.setLevel(logging.DEBUG)
+    api_logger.addHandler(file_handler)
+    api_logger.addHandler(console_handler)
+
+    # Configure genetic algorithm logger
+    genetic_logger = logging.getLogger("pixel_harmony.genetic")
+    genetic_logger.setLevel(logging.DEBUG)
+    genetic_logger.addHandler(file_handler)
+    genetic_logger.addHandler(console_handler)
+
+    # Prevent logs from propagating to root logger
+    api_logger.propagate = False
+    genetic_logger.propagate = False
 
 
 def main(testing=False):
