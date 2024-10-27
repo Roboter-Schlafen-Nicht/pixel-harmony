@@ -71,7 +71,7 @@ All Python code must adhere to [PEP 8](https://www.python.org/dev/peps/pep-0008/
 
 3. Install the required tools:
    ```
-   pip install -r requirements.txt
+   pip install -r requirements-dev.txt
    ```
 
 4. Set up pre-commit hooks:
