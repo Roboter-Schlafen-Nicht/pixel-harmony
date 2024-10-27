@@ -1,4 +1,4 @@
-# PixelHarmony
+# Pixel Harmony
 [![PixelHarmony CI](https://github.com/Roboter-Schlafen-Nicht/pixel-harmony/actions/workflows/ci.yml/badge.svg)](https://github.com/Roboter-Schlafen-Nicht/pixel-harmony/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
@@ -9,7 +9,7 @@ Transform your visual memories into musical experiences.
 
 ## About
 
-PixelHarmony is an innovative application that bridges the gap between visual and auditory art forms. By leveraging the power of artificial intelligence and genetic algorithms, PixelHarmony converts your personal photos into unique, emotionally resonant melodies.
+Pixel Harmony is an innovative application that bridges the gap between visual and auditory art forms. By leveraging the power of artificial intelligence and genetic algorithms, Pixel Harmony converts your personal photos into unique, emotionally resonant melodies.
 
 ## Setup
 

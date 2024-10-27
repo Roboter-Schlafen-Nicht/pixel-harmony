@@ -1,88 +1,237 @@
-"""This module contains the FitnessGenerator class, which is used to generate fitness
-functions for evaluating melodies based on characteristics of West African music.
+"""This module contains the FitnessGenerator class with proper response handling."""
 
-Classes:
-    FitnessGenerator: A class to generate fitness functions for melodies, focusing on
-    rhythmic patterns, pentatonic scales.
-
-Usage Example:
-    generator = FitnessGenerator()
-    fitness_function_code = generator.generate_fitness()
-"""
-
-import dotenv
+import logging
+from typing import List
+from abc import ABC, abstractmethod
 import anthropic
+import dotenv
+
+# Configure logger
+fitness_logger = logging.getLogger("pixel_harmony.api")
+fitness_logger.setLevel(logging.DEBUG)
+
+
+class BaseFitnessFunction(ABC):
+    """Abstract base class for fitness functions."""
+
+    @abstractmethod
+    def fitness(self, melody: List[int]) -> float:
+        """
+        Evaluate the fitness of a melody.
+
+        Args:
+            melody: List of MIDI note numbers
+
+        Returns:
+            float: Fitness score
+        """
+
+
+class DefaultFitnessFunction(BaseFitnessFunction):
+    """Default fitness function implementation."""
+
+    def fitness(self, melody: List[int]) -> float:
+        """Default fitness function that prefers notes in common ranges."""
+        score = 0.0
+        if not melody:
+            return score
+
+        # Basic scoring criteria
+        for i, note in enumerate(melody):
+            # Reward notes in comfortable vocal range
+            if 60 <= note <= 72:
+                score += 1.0
+
+            # Reward stepwise motion
+            if i > 0:
+                interval = abs(note - melody[i - 1])
+                if interval <= 2:
+                    score += 0.5
+                elif interval <= 4:
+                    score += 0.3
+
+        # Reward good start and end notes
+        if melody[0] in [60, 67]:  # Start with tonic or dominant
+            score += 2.0
+        if melody[-1] == 60:  # End with tonic
+            score += 2.0
+
+        return score
+
+
+class GeneratedFitnessFunction(BaseFitnessFunction):
+    """Dynamic fitness function generated based on musical characteristics."""
+
+    def __init__(self, prompt_response: str):
+        """
+        Initialize with the response from the prompt.
+
+        Args:
+            prompt_response: The response containing fitness logic description
+        """
+        self.description = prompt_response
+        self.criteria = self._parse_prompt_response()
+
+    def _parse_prompt_response(self) -> dict:
+        """
+        Parse the prompt response to set up fitness evaluation parameters.
+
+        Returns:
+            dict: Dictionary containing parsed evaluation criteria
+        """
+        criteria = {
+            "preferred_range": (60, 72),  # Default comfortable vocal range
+            "stepwise_motion_weight": 0.5,
+            "cadence_weight": 2.0,
+            "phrase_length": 4,
+            "prefer_consonant_intervals": True,
+        }
+
+        # Parse the description to customize criteria
+        desc_lower = self.description.lower()
+
+        # Adjust range based on description
+        if "high range" in desc_lower:
+            criteria["preferred_range"] = (67, 79)
+        elif "low range" in desc_lower:
+            criteria["preferred_range"] = (48, 60)
+
+        # Adjust weights based on description
+        if "strong emphasis on stepwise motion" in desc_lower:
+            criteria["stepwise_motion_weight"] = 0.8
+        if "strong cadences" in desc_lower:
+            criteria["cadence_weight"] = 3.0
+
+        # Adjust phrase analysis
+        if "longer phrases" in desc_lower:
+            criteria["phrase_length"] = 8
+        elif "short motifs" in desc_lower:
+            criteria["phrase_length"] = 2
+
+        return criteria
+
+    def fitness(self, melody: List[int]) -> float:
+        """
+        Evaluate melody fitness based on the generated criteria.
+
+        Args:
+            melody: List of MIDI note numbers
+
+        Returns:
+            float: Fitness score
+        """
+        if not melody:
+            return 0.0
+
+        score = 0.0
+
+        # Range evaluation
+        min_range, max_range = self.criteria["preferred_range"]
+        score += sum(1.0 for note in melody if min_range <= note <= max_range)
+
+        # Melodic motion
+        for i in range(len(melody) - 1):
+            interval = abs(melody[i] - melody[i + 1])
+            if interval <= 2:
+                score += self.criteria["stepwise_motion_weight"]
+            elif interval <= 4:
+                score += self.criteria["stepwise_motion_weight"] * 0.5
+
+        # Phrase analysis
+        phrase_length = self.criteria["phrase_length"]
+        for i in range(0, len(melody) - phrase_length + 1, phrase_length):
+            phrase = melody[i : i + phrase_length]
+            if self._is_good_phrase(phrase):
+                score += 1.0
+
+        # Cadence evaluation
+        if len(melody) >= 2:
+            final_interval = abs(melody[-2] - melody[-1])
+            if final_interval in [1, 2, 5]:  # Common cadential intervals
+                score += self.criteria["cadence_weight"]
+
+        return score
+
+    def _is_good_phrase(self, phrase: List[int]) -> bool:
+        """
+        Evaluate if a phrase has good musical characteristics.
+
+        Args:
+            phrase: List of MIDI notes representing a musical phrase
+
+        Returns:
+            bool: True if the phrase has good characteristics
+        """
+        if not phrase:
+            return False
+
+        # Check for melodic arch
+        has_arch = max(phrase) != phrase[0] and max(phrase) != phrase[-1]
+
+        # Check for rhythmic pattern (using note intervals as proxy)
+        intervals = [abs(phrase[i] - phrase[i - 1]) for i in range(1, len(phrase))]
+        has_pattern = len(set(intervals)) < len(intervals)  # Some repetition
+
+        return has_arch or has_pattern
 
 
 class FitnessGenerator:
-    """
-    A class used to generate fitness functions for melodies based on West African musical
-    characteristics.
-
-    Methods
-    -------
-    __init__():
-        Initializes the FitnessGenerator by loading environment variables and setting up
-        the Anthropics client.
-
-    generate_fitness():
-        Generates a Python function named 'fitness' that evaluates a melody represented
-        as a list of MIDI note numbers. The generated function focuses on characteristics
-        of West African music, such as rhythmic patterns, pentatonic scales, cyclical
-        structures, call and response, and speech-like melodic contours.
-    """
+    """Class to generate fitness functions based on musical criteria."""
 
     def __init__(self):
-        """Initializes the FitnessGenerator by loading environment variables and setting"""
-        dotenv.load_dotenv()
-        self.client = anthropic.Anthropic()
+        """Initialize the FitnessGenerator."""
+        try:
+            dotenv.load_dotenv()
+            self.client = anthropic.Anthropic()
+            fitness_logger.info("FitnessGenerator initialized successfully")
+        except (anthropic.APIConnectionError, anthropic.APIError) as e:
+            fitness_logger.error("Error initializing FitnessGenerator: %s", e)
+            raise
 
-    def generate_fitness(self):
+    def generate_fitness(self) -> BaseFitnessFunction:
         """
-        Generates a fitness function for evaluating melodies based on characteristics of
-        West African music.
-
-        The generated function, named 'fitness', evaluates a melody represented as a list
-        of MIDI note numbers. The evaluation focuses on rhythmic patterns, syncopation,
-        use of pentatonic scales, cyclical structures, call and response elements, and
-        speech-like melodic contours.
+        Generate a fitness function based on musical criteria.
 
         Returns:
-            str: The Python code for the 'fitness' function as a string.
+            BaseFitnessFunction: A fitness function object
         """
-        prompt = """Create a Python function named 'fitness' that evaluates a melody
-            represented as a list of MIDI note numbers, focusing on characteristics of
-            West African music.
+        try:
+            # Get response from Claude
+            response = self.client.messages.create(
+                model="claude-3-5-sonnet-20240620",
+                max_tokens=4096,
+                messages=[{"role": "user", "content": self._get_fitness_prompt()}],
+            )
 
-            Function Signature: def fitness(melody: List[int]) -> float
+            # Create and return fitness function
+            return GeneratedFitnessFunction(response.content)
 
-            Description of desired musical qualities:
-            Create a fitness function for a melody that embodies key elements of West
-            African music. The melody should emphasize rhythmic patterns and syncopation.
-            It should favor the use of pentatonic scales, which are common in many West
-            African musical traditions. The melody should have a cyclical structure, with
-            repetitive patterns that evolve slightly over time. Include elements of call
-            and response, where a phrase is stated and then answered. The melody should
-            also have a strong relationship to speech patterns, with variations in pitch
-            that might mimic tonal languages.
+        except (
+            anthropic.APIConnectionError,
+            anthropic.APIError,
+            ValueError,
+            TypeError,
+        ) as e:
+            fitness_logger.error("Unexpected error: %s", e)
+            return DefaultFitnessFunction()
 
-            Requirements:
-            1. The function should return a float value, where higher values indicate
-               better fitness.
-            2. Use musical terms and concepts relevant to West African music.
-            3. Consider aspects like rhythmic patterns, use of pentatonic scales, cyclical
-               structures, call and response, and speech-like melodic contours.
-            4. You can use helper functions if needed, but define them within the main
-               function.
-            5. Avoid using external libraries.
+    def _get_fitness_prompt(self) -> str:
+        """Get the prompt for generating fitness criteria."""
+        return """Describe how to evaluate a melody represented as a list of MIDI
+        note numbers, focusing on these aspects:
 
-            Example melody: [60, 62, 64, 67, 69, 72, 74, 76]
+        1. Preferred note range and melodic motion
+        2. Phrase structure and length
+        3. Cadence preferences
+        4. Overall melodic shape
 
-            Please provide only the Python code, without any explanations."""
+        Format your response as a clear description of how each aspect should be
+        evaluated, including any specific musical patterns or characteristics to
+        prefer or avoid.
 
-        message = self.client.messages.create(
-            model="claude-3-5-sonnet-20240620",
-            max_tokens=10240,
-            messages=[{"role": "user", "content": prompt}],
-        )
-        return message.content
+        Example aspects to consider:
+        - Comfortable vocal ranges
+        - Stepwise vs. leap motion
+        - Structural points for cadences
+        - Melodic arch and contour
+        """
