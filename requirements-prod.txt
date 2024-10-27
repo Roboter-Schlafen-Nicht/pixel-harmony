@@ -1,0 +1,10 @@
+# Include base requirements
+-r requirements.txt
+
+# Google Photos Integration
+google-auth-oauthlib
+google-auth
+google-api-python-client
+
+# Performance and Optimization
+numba
