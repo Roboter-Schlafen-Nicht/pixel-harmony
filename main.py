@@ -5,9 +5,14 @@ import sys
 import os
 import time
 from abc import ABC, abstractmethod
+import json
+import keyring
+import requests
 import numpy as np
 import sounddevice as sd
+import streamlit as st
 from pixelharmony.generator import Generator
+from pixelharmony.photos.google_photos import PhotosAPI, GooglePhotosAuth
 
 
 class BasePlayer(ABC):
@@ -16,12 +21,10 @@ class BasePlayer(ABC):
     @abstractmethod
     def play_note(self, midi_note, duration=0.5):
         """Play a single note."""
-        pass
 
     @abstractmethod
     def play_melody(self, melody, note_duration=0.5):
         """Play a sequence of MIDI notes."""
-        pass
 
 
 class MockPlayer(BasePlayer):
@@ -68,8 +71,8 @@ class AudioPlayer(BasePlayer):
             sd.play(test_tone, 44100, device=device_id)
             sd.wait()
             return True
-        except Exception as e:
-            print(f"Error testing device {device_id}: {e}")
+        except sd.PortAudioError as e:
+            print(f"PortAudio error testing device {device_id}: {e}")
             return False
 
     def _initialize_audio(self):
@@ -96,11 +99,9 @@ class AudioPlayer(BasePlayer):
             samples = self.generate_sine_wave(frequency, duration)
             # Apply envelope
             envelope = np.exp(-3 * np.linspace(0, 1, len(samples)))
-            samples = samples * envelope * 0.3
-            sd.play(samples, self.sample_rate, device=self.device)
-            sd.wait()
-        except Exception as e:
-            print(f"Error playing note: {e}")
+            samples *= envelope
+        except sd.PortAudioError as e:
+            print(f"PortAudio error playing note: {e}")
 
     def play_melody(self, melody, note_duration=0.5):
         """Play melody if audio is available."""
@@ -155,7 +156,7 @@ def create_player(testing=False):
         # Create audio player with selected device
         player = AudioPlayer(device=device_id)
         return player
-    except Exception as e:
+    except (sd.PortAudioError, ValueError) as e:
         print(f"Warning: Audio system not available ({e}), using mock player")
         return MockPlayer()
 
@@ -231,11 +232,224 @@ def main(testing=False):
 
         return 0, melody
 
-    except Exception as e:
+    except (OSError, ValueError) as e:
         print(f"An error occurred: {e}")
         return 1, None
 
 
+class PhotosStreamlitUI:
+    """Streamlit UI component for Google Photos integration."""
+
+    def __init__(self):
+        """Initialize the Photos UI component."""
+        self.authenticated = False
+        self.photos_api = None
+        # Configure logging
+
+        # Create formatters
+        formatter = logging.Formatter(
+            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        )
+
+        # File handler for all logs
+        file_handler = logging.FileHandler("pixel_harmony.log")
+        file_handler.setFormatter(formatter)
+        file_handler.setLevel(logging.DEBUG)  # Capture all logs in file
+
+        # Console handler for different levels
+        console_handler = logging.StreamHandler(sys.stdout)
+        console_handler.setFormatter(formatter)
+        console_handler.setLevel(logging.INFO)  # Show INFO and above in console
+
+        self.photos_logger = logging.getLogger("pixel_harmony.photos")
+        self.photos_logger.setLevel(logging.INFO)
+        self.photos_logger.addHandler(file_handler)
+        self.photos_logger.addHandler(console_handler)
+        self._check_authentication()
+
+    def _check_authentication(self):
+        """Check if user is already authenticated."""
+        try:
+            if GooglePhotosAuth.has_valid_credentials():
+                creds = GooglePhotosAuth.get_credentials()
+                self.photos_api = PhotosAPI(creds)
+                self.authenticated = True
+                self.photos_logger.info("Successfully authenticated with Google Photos")
+            else:
+                self.authenticated = False
+        except (keyring.errors.KeyringError, json.JSONDecodeError) as e:
+            self.photos_logger.error("Error checking authentication: %s", e)
+            self.authenticated = False
+
+    def render(self):
+        """Render the Google Photos UI component."""
+        st.header("Google Photos Integration")
+
+        if not self.authenticated:
+            st.warning("Not connected to Google Photos")
+            if st.button("Connect to Google Photos"):
+                try:
+                    # Clear existing credentials to force new authentication
+                    GooglePhotosAuth.clear_credentials()
+
+                    with st.spinner("Connecting to Google Photos..."):
+                        creds = GooglePhotosAuth.get_credentials()
+                        self.photos_api = PhotosAPI(creds)
+                        self.authenticated = True
+                    st.success("Successfully connected to Google Photos!")
+                    st.rerun()
+                except (
+                    keyring.errors.KeyringError,
+                    json.JSONDecodeError,
+                    requests.exceptions.RequestException,
+                ) as e:
+                    self.photos_logger.error("Error during authentication: %s", e)
+                    st.error("Failed to connect to Google Photos. Please try again.")
+        else:
+            st.success("Connected to Google Photos")
+            if st.button("Disconnect"):
+                try:
+                    GooglePhotosAuth.clear_credentials()
+                    self.authenticated = False
+                    self.photos_api = None
+                    st.rerun()
+                except keyring.errors.KeyringError as e:
+                    self.photos_logger.error("Error during disconnect: %s", e)
+                    st.error("Failed to disconnect. Please try again.")
+
+    def list_all_albums(self):
+        """List all albums including shared ones."""
+        if not self.authenticated:
+            self.photos_logger.warning(
+                "Attempted to list albums while not authenticated"
+            )
+            return None
+
+        try:
+            self.photos_logger.info("Fetching all albums")
+            all_albums = []
+
+            # Fetch owned albums
+            owned_response = self.photos_api.make_request("albums", method="GET")
+            if "albums" in owned_response:
+                for album in owned_response["albums"]:
+                    album["isShared"] = False
+                all_albums.extend(owned_response["albums"])
+
+            # Fetch shared albums
+            shared_response = self.photos_api.make_request("sharedAlbums", method="GET")
+            if "sharedAlbums" in shared_response:
+                for album in shared_response["sharedAlbums"]:
+                    album["isShared"] = True
+                    # Store shareToken for later use
+                    album["shareToken"] = album.get("shareToken", "")
+                all_albums.extend(shared_response["sharedAlbums"])
+
+            self.photos_logger.info("Found total of %d albums", len(all_albums))
+            return all_albums
+
+        except requests.exceptions.RequestException as e:
+            self.photos_logger.error("Error listing albums: %s", str(e))
+            st.error(f"Failed to fetch albums: {str(e)}")
+            return None
+
+    def get_photos_from_album(self, album_id, is_shared=False, share_token=None):
+        """Get photos from an album."""
+        if not self.authenticated:
+            return None
+
+        try:
+            self.photos_logger.info(
+                "Fetching photos from album %s (shared: %s)", album_id, is_shared
+            )
+
+            if is_shared:
+                if not share_token:
+                    self.photos_logger.error(
+                        "Share token is required for shared albums"
+                    )
+                    return None
+
+                # For shared albums, use the shareToken directly
+                response = self.photos_api.make_request(
+                    "mediaItems:search",
+                    method="POST",
+                    data={
+                        "albumId": album_id,
+                        "pageSize": 100,
+                        "shareToken": share_token,
+                    },
+                )
+            else:
+                response = self.photos_api.make_request(
+                    "mediaItems:search",
+                    method="POST",
+                    data={"albumId": album_id, "pageSize": 100},
+                )
+
+            photos = response.get("mediaItems", [])
+            self.photos_logger.info("Found %d photos in album", len(photos))
+            return photos
+
+        except requests.exceptions.RequestException as e:
+            self.photos_logger.error("Error getting photos from album: %s", str(e))
+            st.error(f"Failed to fetch photos: {str(e)}")
+            return None
+
+
+def initialize_photos_page():
+    """Initialize the photos page in the Streamlit app."""
+    st.set_page_config(page_title="Pixel Harmony - Photos", layout="wide")
+
+    photos_ui = PhotosStreamlitUI()
+    photos_ui.render()
+
+    if photos_ui.authenticated:
+        with st.spinner("Loading albums..."):
+            albums = photos_ui.list_all_albums()
+
+        if albums:
+            st.subheader("Your Albums")
+            selected_album = st.selectbox(
+                "Select an album",
+                options=albums,
+                format_func=lambda x: f"{x.get('title', 'Untitled Album')} {'(Shared)' if x.get('isShared') else ''}",
+            )
+
+            if selected_album:
+                with st.spinner("Loading photos..."):
+                    photos = photos_ui.get_photos_from_album(
+                        selected_album["id"],
+                        is_shared=selected_album.get("isShared", False),
+                        share_token=selected_album.get("shareToken"),
+                    )
+
+                if photos:
+                    st.subheader(f"Photos in {selected_album['title']}")
+                    cols = st.columns(3)
+                    for idx, photo in enumerate(photos):
+                        with cols[idx % 3]:
+                            if "baseUrl" in photo:
+                                st.image(
+                                    photo["baseUrl"],
+                                    caption=photo.get("filename", ""),
+                                    use_container_width=True,
+                                )
+                                if st.button(
+                                    f"Generate Melody from {photo.get('filename', 'Photo')}",
+                                    key=photo["id"],
+                                ):
+                                    st.session_state["selected_photo"] = photo
+                                    st.info(
+                                        "Melody generation will be implemented in the next phase"
+                                    )
+                else:
+                    st.warning("No photos found in this album")
+        else:
+            st.warning(
+                "No albums found in your Google Photos account. Please make sure you have at least one album."
+            )
+
+
 if __name__ == "__main__":
-    exit_code, _ = main(testing=False)
-    exit(exit_code)
+    initialize_photos_page()

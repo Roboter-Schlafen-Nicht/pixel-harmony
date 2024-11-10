@@ -99,14 +99,10 @@ To run PixelHarmony:
 1. Run the application:
 
 ```bash
-python main.py
+streamlit run main.py
 ```
 
-2. Follow the interactive prompts to:
-   - Select an audio output device
-   - Generate a melody using genetic algorithms
-   - Listen to the generated melody
-   - Save or discard the MIDI file
+2. Your default browser will open the UI for creating MIDI files from photos. This is still in development and a developers sandbox at the moment.
 
 ## Development
 
