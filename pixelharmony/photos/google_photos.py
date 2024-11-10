@@ -1,16 +1,14 @@
 """Module for handling Google Photos OAuth integration with Streamlit UI."""
 
-import os
+import logging
 import json
 from datetime import datetime
 import keyring
-from pathlib import Path
 import streamlit as st
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 import requests
-import logging
 
 # Configure logging
 photos_logger = logging.getLogger("pixel_harmony.photos")
@@ -74,10 +72,10 @@ class GooglePhotosAuth:
                 scopes=creds_data["scopes"],
             )
             if creds_data["expiry"]:
-                creds._expiry = datetime.fromisoformat(creds_data["expiry"])
+                creds.expiry = datetime.fromisoformat(creds_data["expiry"])
             return creds
-        except Exception as e:
-            photos_logger.error(f"Error loading credentials: {e}")
+        except (keyring.errors.KeyringError, json.JSONDecodeError) as e:
+            photos_logger.error("Error loading credentials: %s", e)
             return None
 
     @staticmethod
@@ -86,7 +84,7 @@ class GooglePhotosAuth:
         try:
             creds = GooglePhotosAuth._load_credentials()
             return creds is not None and creds.valid
-        except Exception:
+        except (keyring.errors.KeyringError, json.JSONDecodeError):
             return False
 
     @staticmethod
@@ -131,7 +129,7 @@ class PhotosAPI:
             f"{GooglePhotosAuth.PHOTOS_LIBRARY_API}/{GooglePhotosAuth.API_VERSION}"
         )
 
-    def _make_request(self, endpoint, method="GET", data=None, params=None):
+    def make_request(self, endpoint, method="GET", data=None, params=None):
         """Make an authenticated request to the Photos API."""
         headers = {
             "Authorization": f"Bearer {self.credentials.token}",
@@ -139,26 +137,27 @@ class PhotosAPI:
         }
 
         url = f"{self.base_url}/{endpoint}"
-        photos_logger.info(f"Making {method} request to {url}")
-        photos_logger.debug(f"Request data: {data}")
+        photos_logger.info("Making %s request to %s", method, url)
+        photos_logger.debug("Request data: %s", data)
 
+        response = None
         try:
             if method == "GET":
-                response = requests.get(url, headers=headers, params=params)
+                response = requests.get(url, headers=headers, params=params, timeout=10)
             elif method == "POST":
-                response = requests.post(url, headers=headers, json=data)
+                response = requests.post(url, headers=headers, json=data, timeout=10)
 
-            photos_logger.debug(f"Response status code: {response.status_code}")
+            photos_logger.debug("Response status code: %s", response.status_code)
             response.raise_for_status()
 
             response_data = response.json()
-            photos_logger.debug(f"Response data: {response_data}")
+            photos_logger.debug("Response data: %s", response_data)
             return response_data
 
         except requests.exceptions.RequestException as e:
-            photos_logger.error(f"API request failed: {str(e)}")
+            photos_logger.error("API request failed: %s", str(e))
             if hasattr(e.response, "text"):
-                photos_logger.error(f"Error response: {e.response.text}")
+                photos_logger.error("Error response: %s", e.response.text)
             raise
 
 
@@ -181,8 +180,8 @@ class PhotosStreamlitUI:
                 photos_logger.info("Successfully authenticated with Google Photos")
             else:
                 self.authenticated = False
-        except Exception as e:
-            photos_logger.error(f"Error checking authentication: {e}")
+        except (keyring.errors.KeyringError, json.JSONDecodeError) as e:
+            photos_logger.error("Error checking authentication: %s", e)
             self.authenticated = False
 
     def render(self):
@@ -202,8 +201,12 @@ class PhotosStreamlitUI:
                         self.authenticated = True
                     st.success("Successfully connected to Google Photos!")
                     st.rerun()
-                except Exception as e:
-                    photos_logger.error(f"Error during authentication: {e}")
+                except (
+                    keyring.errors.KeyringError,
+                    json.JSONDecodeError,
+                    requests.exceptions.RequestException,
+                ) as e:
+                    photos_logger.error("Error during authentication: %s", e)
                     st.error("Failed to connect to Google Photos. Please try again.")
         else:
             st.success("Connected to Google Photos")
@@ -213,8 +216,8 @@ class PhotosStreamlitUI:
                     self.authenticated = False
                     self.photos_api = None
                     st.rerun()
-                except Exception as e:
-                    photos_logger.error(f"Error during disconnect: {e}")
+                except keyring.errors.KeyringError as e:
+                    photos_logger.error("Error during disconnect: %s", e)
                     st.error("Failed to disconnect. Please try again.")
 
     def list_all_albums(self):
@@ -228,16 +231,14 @@ class PhotosStreamlitUI:
             all_albums = []
 
             # Fetch owned albums
-            owned_response = self.photos_api._make_request("albums", method="GET")
+            owned_response = self.photos_api.make_request("albums", method="GET")
             if "albums" in owned_response:
                 for album in owned_response["albums"]:
                     album["isShared"] = False
                 all_albums.extend(owned_response["albums"])
 
             # Fetch shared albums
-            shared_response = self.photos_api._make_request(
-                "sharedAlbums", method="GET"
-            )
+            shared_response = self.photos_api.make_request("sharedAlbums", method="GET")
             if "sharedAlbums" in shared_response:
                 for album in shared_response["sharedAlbums"]:
                     album["isShared"] = True
@@ -245,11 +246,11 @@ class PhotosStreamlitUI:
                     album["shareToken"] = album.get("shareToken", "")
                 all_albums.extend(shared_response["sharedAlbums"])
 
-            photos_logger.info(f"Found total of {len(all_albums)} albums")
+            photos_logger.info("Found total of %d albums", len(all_albums))
             return all_albums
 
-        except Exception as e:
-            photos_logger.error(f"Error listing albums: {str(e)}")
+        except requests.exceptions.RequestException as e:
+            photos_logger.error("Error listing albums: %s", str(e))
             st.error(f"Failed to fetch albums: {str(e)}")
             return None
 
@@ -260,7 +261,7 @@ class PhotosStreamlitUI:
 
         try:
             photos_logger.info(
-                f"Fetching photos from album {album_id} (shared: {is_shared})"
+                "Fetching photos from album %s (shared: %s)", album_id, is_shared
             )
 
             if is_shared:
@@ -269,7 +270,7 @@ class PhotosStreamlitUI:
                     return None
 
                 # For shared albums, use the shareToken directly
-                response = self.photos_api._make_request(
+                response = self.photos_api.make_request(
                     "mediaItems:search",
                     method="POST",
                     data={
@@ -279,18 +280,18 @@ class PhotosStreamlitUI:
                     },
                 )
             else:
-                response = self.photos_api._make_request(
+                response = self.photos_api.make_request(
                     "mediaItems:search",
                     method="POST",
                     data={"albumId": album_id, "pageSize": 100},
                 )
 
             photos = response.get("mediaItems", [])
-            photos_logger.info(f"Found {len(photos)} photos in album")
+            photos_logger.info("Found %d photos in album", len(photos))
             return photos
 
-        except Exception as e:
-            photos_logger.error(f"Error getting photos from album: {str(e)}")
+        except requests.exceptions.RequestException as e:
+            photos_logger.error("Error getting photos from album: %s", str(e))
             st.error(f"Failed to fetch photos: {str(e)}")
             return None
 
