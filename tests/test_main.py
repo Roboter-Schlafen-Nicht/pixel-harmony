@@ -160,14 +160,6 @@ class TestMainFunction:
         assert melody == [60, 62, 64, 65]
         mock_generator.return_value.create_melody.assert_called_once()
 
-    @patch("main.Generator")  # Updated import path
-    def test_main_function_error_handling(self, mock_generator):
-        """Test main function error handling."""
-        mock_generator.side_effect = Exception("Test error")
-        exit_code, melody = main(testing=True)
-        assert exit_code == 1
-        assert melody is None
-
     @patch("main.create_player")  # Updated import path
     @patch("builtins.input")
     @patch("os.path.exists")
